@@ -18,7 +18,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3002/api/login', {
+      const response = await fetch('http://localhost:3002/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
