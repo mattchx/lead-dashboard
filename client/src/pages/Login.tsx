@@ -5,6 +5,8 @@ interface LoginProps {
   onLoginSuccess: () => void;
 }
 
+import './Login.css';
+
 export default function Login({ onLoginSuccess }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -38,9 +40,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
   return (
     <div className="login-container">
-      <h2>Login</h2>
+      <h1>Login</h1>
       {error && <div className="error-message">{error}</div>}
-      <form onSubmit={handleSubmit}>
+      <form className="login-form" onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Username</label>
           <input
@@ -59,7 +61,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             required
           />
         </div>
-        <button type="submit">Login</button>
+        <button className="login-button" type="submit">Login</button>
       </form>
     </div>
   );

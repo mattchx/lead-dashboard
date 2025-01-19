@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import './styles/global.css';
 import { AuthProvider } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
