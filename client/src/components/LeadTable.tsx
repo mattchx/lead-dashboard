@@ -1,4 +1,6 @@
+import { useCallback } from 'react';
 import { Lead } from '../types/Lead';
+import * as XLSX from 'xlsx';
 import './LeadTable.css';
 
 interface LeadTableProps {
@@ -11,6 +13,12 @@ interface LeadTableProps {
 }
 
 export default function LeadTable({ leads, onStatusUpdate, onSendEmail, onEdit, filterStatus, searchQuery }: LeadTableProps) {
+  const handleExport = useCallback(() => {
+    const worksheet = XLSX.utils.json_to_sheet(leads);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Leads');
+    XLSX.writeFile(workbook, 'leads.xlsx');
+  }, [leads]);
   return (
     <div className="table-container">
       <table className="lead-table">
@@ -25,6 +33,15 @@ export default function LeadTable({ leads, onStatusUpdate, onSendEmail, onEdit, 
           <th>Status</th>
           <th>Lead Gen Status</th>
           <th>Actions</th>
+          <th>
+            <button
+              onClick={handleExport}
+              className="export-button"
+              title="Export to Excel"
+            >
+              Export
+            </button>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -34,7 +51,8 @@ export default function LeadTable({ leads, onStatusUpdate, onSendEmail, onEdit, 
             (!searchQuery ||
               lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
               lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              lead.phone.includes(searchQuery)
+              lead.phone.includes(searchQuery) ||
+              lead.contact_name?.toLowerCase().includes(searchQuery.toLowerCase())
             )
           )
           .map((lead) => (
