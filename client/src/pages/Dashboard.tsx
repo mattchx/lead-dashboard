@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { Lead } from '../types/Lead';
 import LeadTable from '../components/LeadTable';
@@ -101,6 +102,22 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     }
   };
 
+  const handleExport = useCallback(() => {
+    const filteredLeads = leads.filter(lead =>
+      (!filterStatus || lead.status === filterStatus) &&
+      (!searchQuery ||
+        lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.phone.includes(searchQuery) ||
+        lead.contact_name?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    );
+    const worksheet = XLSX.utils.json_to_sheet(filteredLeads);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Leads');
+    XLSX.writeFile(workbook, 'leads.xlsx');
+  }, [leads, filterStatus, searchQuery]);
+
   const handleSubmit = async (lead: Lead) => {
     try {
       await fetch(`http://localhost:3002/api/leads/${lead.id}`, {
@@ -147,6 +164,13 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+          <button
+            onClick={handleExport}
+            className="export-button"
+            title="Export to Excel"
+          >
+            Export
+          </button>
         </div>
 
         {showForm ? (
