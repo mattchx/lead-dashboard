@@ -6,9 +6,10 @@ interface LeadFormProps {
   leadTypes: { id: number; name: string }[];
   onSubmit: (lead: Lead) => void;
   onCancel: () => void;
+  onDelete?: () => void;
 }
 
-export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel }: LeadFormProps) {
+export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel, onDelete }: LeadFormProps) {
   const [formData, setFormData] = useState<Lead>(initialData || {
     name: '',
     email: '',
@@ -155,8 +156,17 @@ export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel }:
       </div>
 
       <div className="form-actions">
-        <button type="submit">Save</button>
-        <button type="button" onClick={onCancel}>Cancel</button>
+        <button type="submit" className="save-button">Save</button>
+        {initialData && onDelete && (
+          <button
+            type="button"
+            className="delete-button"
+            onClick={onDelete}
+          >
+            Delete
+          </button>
+        )}
+        <button type="button" className="cancel-button" onClick={onCancel}>Cancel</button>
       </div>
     </form>
   );

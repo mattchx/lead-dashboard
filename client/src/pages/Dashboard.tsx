@@ -84,6 +84,23 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     setShowForm(true);
   };
 
+  const handleDelete = async (id?: number) => {
+    if (!id) return;
+    try {
+      await fetch(`http://localhost:3002/api/leads/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      setShowForm(false);
+      fetchLeads();
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+    }
+  };
+
   const handleSubmit = async (lead: Lead) => {
     try {
       await fetch(`http://localhost:3002/api/leads/${lead.id}`, {
@@ -138,6 +155,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             leadTypes={[]}
             onSubmit={handleSubmit}
             onCancel={() => setShowForm(false)}
+            onDelete={currentLead?.id ? () => handleDelete(currentLead.id) : undefined}
           />
         ) : (
           <LeadTable
