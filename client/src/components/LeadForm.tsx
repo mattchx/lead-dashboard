@@ -15,7 +15,7 @@ export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel }:
     phone: '',
     status: 'New',
     notes: '',
-    type: { id: 1, name: 'Dentist' }, // Default to Dentist type
+    type: leadTypes[0] ? { id: leadTypes[0].id, name: leadTypes[0].name } : undefined,
     leadGenStatus: 'Pending',
     message: '',
     contactName: 'New Contact',
@@ -107,7 +107,7 @@ export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel }:
         <label>Lead Type</label>
         <select
           name="type"
-          value={formData.type.id}
+          value={formData.type?.id || ''}
           onChange={(e) => setFormData(prev => ({
             ...prev,
             type: {
@@ -116,12 +116,19 @@ export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel }:
             }
           }))}
           required
+          disabled={leadTypes.length === 0}
         >
-          {leadTypes.map(type => (
-            <option key={type.id} value={type.id}>
-              {type.name}
+          {leadTypes.length > 0 ? (
+            leadTypes.map(type => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))
+          ) : (
+            <option value="" disabled>
+              No lead types available
             </option>
-          ))}
+          )}
         </select>
       </div>
 

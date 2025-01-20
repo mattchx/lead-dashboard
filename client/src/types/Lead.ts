@@ -12,7 +12,7 @@ export interface Lead {
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
-  type: LeadType;
+  type?: LeadType;
   leadGenStatus: 'Pending' | 'Processed' | 'Archived';
   message?: string;
   contactName: string;
