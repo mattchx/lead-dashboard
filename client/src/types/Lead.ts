@@ -13,8 +13,8 @@ export interface Lead {
   createdAt?: string;
   updatedAt?: string;
   type?: LeadType;
-  leadGenStatus: 'Pending' | 'Processed' | 'Archived';
+  lead_gen_status: 'Pending' | 'Processed' | 'Archived';
   message?: string;
-  contactName: string;
-  contactEmail: string;
+  contact_name: string;
+  contact_email: string;
 }

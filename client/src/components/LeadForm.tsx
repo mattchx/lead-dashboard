@@ -17,10 +17,10 @@ export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel, o
     status: 'New',
     notes: '',
     type: leadTypes[0] ? { id: leadTypes[0].id, name: leadTypes[0].name } : undefined,
-    leadGenStatus: 'Pending',
+    lead_gen_status: 'Pending',
     message: '',
-    contactName: 'New Contact',
-    contactEmail: 'contact@example.com'
+    contact_name: 'New Contact',
+    contact_email: 'contact@example.com'
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -86,8 +86,8 @@ export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel, o
         <label>Contact Name</label>
         <input
           type="text"
-          name="contactName"
-          value={formData.contactName}
+          name="contact_name"
+          value={formData.contact_name}
           onChange={handleChange}
           required
         />
@@ -97,8 +97,8 @@ export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel, o
         <label>Contact Email</label>
         <input
           type="email"
-          name="contactEmail"
-          value={formData.contactEmail}
+          name="contact_email"
+          value={formData.contact_email}
           onChange={handleChange}
           required
         />
@@ -136,8 +136,8 @@ export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel, o
       <div className="form-group">
         <label>Lead Gen Status</label>
         <select
-          name="leadGenStatus"
-          value={formData.leadGenStatus}
+          name="lead_gen_status"
+          value={formData.lead_gen_status}
           onChange={handleChange}
         >
           <option value="Pending">Pending</option>

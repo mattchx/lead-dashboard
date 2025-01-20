@@ -42,13 +42,13 @@ export default function LeadTable({ leads, onStatusUpdate, onSendEmail, onEdit, 
             <td>{lead.name}</td>
             <td>{lead.email}</td>
             <td>{lead.phone}</td>
-            <td>{lead.contactName}</td>
-            <td>{lead.contactEmail}</td>
+            <td>{lead.contact_name}</td>
+            <td>{lead.contact_email}</td>
             <td>{lead.type?.name || 'No Type'}</td>
             <td>{lead.status}</td>
             <td>
               <select
-                value={lead.leadGenStatus}
+                value={lead.lead_gen_status}
                 onChange={(e) => onStatusUpdate(lead.id!, e.target.value)}
               >
                 <option value="Pending">Pending</option>
@@ -66,7 +66,7 @@ export default function LeadTable({ leads, onStatusUpdate, onSendEmail, onEdit, 
                 </button>
                 <button
                   onClick={() => onSendEmail(lead)}
-                  disabled={lead.leadGenStatus !== 'Processed'}
+                  disabled={lead.lead_gen_status !== 'Processed'}
                   className="email-button"
                 >
                   Send Email
