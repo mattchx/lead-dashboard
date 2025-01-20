@@ -1,4 +1,5 @@
 import { Lead } from '../types/Lead';
+import './LeadTable.css';
 
 interface LeadTableProps {
   leads: Lead[];
@@ -11,7 +12,8 @@ interface LeadTableProps {
 
 export default function LeadTable({ leads, onStatusUpdate, onSendEmail, onEdit, filterStatus, searchQuery }: LeadTableProps) {
   return (
-    <table className="lead-table">
+    <div className="table-container">
+      <table className="lead-table">
       <thead>
         <tr>
           <th>Name</th>
@@ -74,6 +76,7 @@ export default function LeadTable({ leads, onStatusUpdate, onSendEmail, onEdit, 
           </tr>
         ))}
       </tbody>
-    </table>
+      </table>
+    </div>
   );
 }

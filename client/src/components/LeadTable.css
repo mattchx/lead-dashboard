@@ -1,0 +1,66 @@
+.lead-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.lead-table th,
+.lead-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lead-table th {
+  background-color: #f8f9fa;
+  font-weight: 500;
+  color: #333;
+  position: sticky;
+  top: 0;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.actions-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-button,
+.email-button {
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.edit-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.edit-button:hover {
+  background-color: #45a049;
+}
+
+.email-button {
+  background-color: #2196F3;
+  color: white;
+}
+
+.email-button:hover {
+  background-color: #1e88e5;
+}
+
+.email-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
