@@ -14,7 +14,7 @@ const submissionLimiter = rateLimit({
 
 // External lead submission endpoint
 router.post('/external', submissionLimiter, (req, res) => {
-  const { name, email, phone, type_id, contact_name, contact_email } = req.body;
+  const { name, email, phone, type_id, contact_name, contact_email, source } = req.body;
   
   // Basic validation
   if (!name || !email || !phone || !type_id || !contact_name || !contact_email) {
@@ -29,12 +29,12 @@ router.post('/external', submissionLimiter, (req, res) => {
       INSERT INTO leads (
         name, email, phone, status, notes,
         type_id, message, contact_name, contact_email,
-        lead_gen_status, time_received, source
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        lead_gen_status, source
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       name, email, phone, 'New', '',
-      type_id, '', contact_name, contact_email,
-      'Pending', new Date().toISOString(), 'external'
+      type_id, null, contact_name, contact_email,
+      'Pending', source || null
     );
 
     const newLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(result.lastInsertRowid);
@@ -79,12 +79,12 @@ router.post('/', authenticateToken, (req, res) => {
       INSERT INTO leads (
         name, email, phone, status, notes,
         type_id, message, contact_name, contact_email,
-        lead_gen_status, time_received
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        lead_gen_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       name, email, phone, status || 'New', notes,
-      type_id, message, contact_name, contact_email,
-      'Pending', new Date().toISOString()
+      type_id, message || null, contact_name, contact_email,
+      'Pending'
     );
 
     const newLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(result.lastInsertRowid);
