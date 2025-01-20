@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Lead, LeadType } from '../types/Lead';
+import { Lead } from '../types/Lead';
 import LeadTable from '../components/LeadTable';
 import LeadForm from '../components/LeadForm';
 
@@ -19,39 +19,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   };
 
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [leadTypes, setLeadTypes] = useState<LeadType[]>([]);
-  const [showForm, setShowForm] = useState(false);
   const [currentLead, setCurrentLead] = useState<Lead | null>(null);
+  const [showForm, setShowForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-
-  const fetchLeadTypes = async () => {
-    try {
-      const response = await fetch('http://localhost:3002/api/lead-types', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new TypeError("Response is not JSON");
-      }
-      const data = await response.json();
-      if (!Array.isArray(data)) {
-        throw new TypeError("Expected array of lead types");
-      }
-      setLeadTypes(data);
-    } catch (error) {
-      console.error('Error fetching lead types:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchLeadTypes();
-  }, []);
 
   useEffect(() => {
     fetchLeads();
@@ -74,11 +45,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     } catch (error) {
       console.error('Error fetching leads:', error);
     }
-  };
-
-  const handleCreate = () => {
-    setCurrentLead(null);
-    setShowForm(true);
   };
 
   const handleStatusUpdate = async (id: number, newStatus: string) => {
@@ -113,28 +79,28 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     }
   };
 
+  const handleEdit = (lead: Lead) => {
+    setCurrentLead(lead);
+    setShowForm(true);
+  };
+
   const handleSubmit = async (lead: Lead) => {
     try {
-      const method = lead.id ? 'PUT' : 'POST';
-      const url = lead.id
-        ? `http://localhost:3002/api/leads/${lead.id}`
-        : 'http://localhost:3002/api/leads';
-
-      await fetch(url, {
-        method,
+      await fetch(`http://localhost:3002/api/leads/${lead.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify(lead)
       });
-
       setShowForm(false);
       fetchLeads();
     } catch (error) {
-      console.error('Error saving lead:', error);
+      console.error('Error updating lead:', error);
     }
   };
+
 
   return (
     <div className="dashboard-container">
@@ -146,36 +112,30 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       </div>
       
       <div className="lead-management">
-        <div className="lead-actions">
-          <div className="filters">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="">All Statuses</option>
-              <option value="New">New</option>
-              <option value="Contacted">Contacted</option>
-              <option value="Qualified">Qualified</option>
-              <option value="Lost">Lost</option>
-            </select>
-            
-            <input
-              type="text"
-              placeholder="Search leads..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div className="filters">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="">All Statuses</option>
+            <option value="New">New</option>
+            <option value="Contacted">Contacted</option>
+            <option value="Qualified">Qualified</option>
+            <option value="Lost">Lost</option>
+          </select>
           
-          <button onClick={handleCreate} className="create-button">
-            Add New Lead
-          </button>
+          <input
+            type="text"
+            placeholder="Search leads..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
         {showForm ? (
           <LeadForm
             initialData={currentLead || undefined}
-            leadTypes={leadTypes}
+            leadTypes={[]}
             onSubmit={handleSubmit}
             onCancel={() => setShowForm(false)}
           />
@@ -184,6 +144,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             leads={leads}
             onStatusUpdate={handleStatusUpdate}
             onSendEmail={handleSendEmail}
+            onEdit={handleEdit}
             filterStatus={filterStatus}
             searchQuery={searchQuery}
           />

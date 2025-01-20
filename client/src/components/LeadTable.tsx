@@ -4,11 +4,12 @@ interface LeadTableProps {
   leads: Lead[];
   onStatusUpdate: (id: number, newStatus: string) => void;
   onSendEmail: (lead: Lead) => void;
+  onEdit: (lead: Lead) => void;
   filterStatus?: string;
   searchQuery?: string;
 }
 
-export default function LeadTable({ leads, onStatusUpdate, onSendEmail, filterStatus, searchQuery }: LeadTableProps) {
+export default function LeadTable({ leads, onStatusUpdate, onSendEmail, onEdit, filterStatus, searchQuery }: LeadTableProps) {
   return (
     <table className="lead-table">
       <thead>
@@ -54,12 +55,21 @@ export default function LeadTable({ leads, onStatusUpdate, onSendEmail, filterSt
               </select>
             </td>
             <td>
-              <button
-                onClick={() => onSendEmail(lead)}
-                disabled={lead.leadGenStatus !== 'Processed'}
-              >
-                Send Email
-              </button>
+              <div className="actions-container">
+                <button
+                  onClick={() => onEdit(lead)}
+                  className="edit-button"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => onSendEmail(lead)}
+                  disabled={lead.leadGenStatus !== 'Processed'}
+                  className="email-button"
+                >
+                  Send Email
+                </button>
+              </div>
             </td>
           </tr>
         ))}
