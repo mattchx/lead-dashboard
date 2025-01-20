@@ -3,17 +3,21 @@ import { Lead } from '../types/Lead';
 
 interface LeadFormProps {
   initialData?: Lead;
+  leadTypes: { id: number; name: string }[];
   onSubmit: (lead: Lead) => void;
   onCancel: () => void;
 }
 
-export default function LeadForm({ initialData, onSubmit, onCancel }: LeadFormProps) {
+export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel }: LeadFormProps) {
   const [formData, setFormData] = useState<Lead>(initialData || {
     name: '',
     email: '',
     phone: '',
     status: 'New',
-    notes: ''
+    notes: '',
+    type: { id: 1, name: 'Dentist' }, // Default to Dentist type
+    leadGenStatus: 'Pending',
+    message: ''
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -72,6 +76,41 @@ export default function LeadForm({ initialData, onSubmit, onCancel }: LeadFormPr
           <option value="Contacted">Contacted</option>
           <option value="Qualified">Qualified</option>
           <option value="Lost">Lost</option>
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label>Lead Type</label>
+        <select
+          name="type"
+          value={formData.type.id}
+          onChange={(e) => setFormData(prev => ({
+            ...prev,
+            type: {
+              id: parseInt(e.target.value),
+              name: e.target.selectedOptions[0].text
+            }
+          }))}
+          required
+        >
+          {leadTypes.map(type => (
+            <option key={type.id} value={type.id}>
+              {type.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label>Lead Gen Status</label>
+        <select
+          name="leadGenStatus"
+          value={formData.leadGenStatus}
+          onChange={handleChange}
+        >
+          <option value="Pending">Pending</option>
+          <option value="Processed">Processed</option>
+          <option value="Archived">Archived</option>
         </select>
       </div>
 

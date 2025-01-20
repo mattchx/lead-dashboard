@@ -12,6 +12,11 @@ db.exec(`
     role TEXT DEFAULT 'user'
   );
   
+  CREATE TABLE IF NOT EXISTS lead_types (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE
+  );
+
   CREATE TABLE IF NOT EXISTS leads (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -19,9 +24,17 @@ db.exec(`
     phone TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'New',
     notes TEXT,
+    type_id INTEGER NOT NULL REFERENCES lead_types(id),
+    lead_gen_status TEXT DEFAULT 'Pending',
+    message TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  -- Insert initial lead types
+  INSERT OR IGNORE INTO lead_types (name) VALUES
+    ('Dentist'),
+    ('Roofer');
 `);
 
 export default db;

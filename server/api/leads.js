@@ -7,7 +7,14 @@ const router = express.Router();
 // Get all leads
 router.get('/', authenticateToken, (req, res) => {
   try {
-    const leads = db.prepare('SELECT * FROM leads ORDER BY created_at DESC').all();
+    const leads = db.prepare(`
+      SELECT
+        leads.*,
+        lead_types.name as type_name
+      FROM leads
+      JOIN lead_types ON leads.type_id = lead_types.id
+      ORDER BY leads.created_at DESC
+    `).all();
     res.json(leads);
   } catch (error) {
     console.error('Error fetching leads:', error);
@@ -17,17 +24,26 @@ router.get('/', authenticateToken, (req, res) => {
 
 // Create new lead
 router.post('/', authenticateToken, (req, res) => {
-  const { name, email, phone, status, notes } = req.body;
+  const { name, email, phone, status, notes, type_id, message } = req.body;
   
-  if (!name || !email || !phone) {
-    return res.status(400).json({ error: 'Name, email and phone are required' });
+  if (!name || !email || !phone || !type_id) {
+    return res.status(400).json({
+      error: 'Name, email, phone and type are required'
+    });
   }
 
   try {
     const result = db.prepare(`
-      INSERT INTO leads (name, email, phone, status, notes)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(name, email, phone, status || 'New', notes);
+      INSERT INTO leads (
+        name, email, phone, status, notes,
+        type_id, message,
+        lead_gen_status, time_received
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      name, email, phone, status || 'New', notes,
+      type_id, message,
+      'Pending', new Date().toISOString()
+    );
 
     const newLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(newLead);
@@ -40,14 +56,28 @@ router.post('/', authenticateToken, (req, res) => {
 // Update lead
 router.put('/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
-  const { name, email, phone, status, notes } = req.body;
+  const { name, email, phone, status, notes, type_id, message } = req.body;
+
+  if (!name || !email || !phone || !type_id) {
+    return res.status(400).json({
+      error: 'Name, email, phone and type are required'
+    });
+  }
 
   try {
     db.prepare(`
       UPDATE leads
-      SET name = ?, email = ?, phone = ?, status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+      SET
+        name = ?,
+        email = ?,
+        phone = ?,
+        status = ?,
+        notes = ?,
+        type_id = ?,
+        message = ?,
+        updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(name, email, phone, status, notes, id);
+    `).run(name, email, phone, status, notes, type_id, message, id);
 
     const updatedLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
     res.json(updatedLead);

@@ -1,3 +1,8 @@
+export interface LeadType {
+  id: number;
+  name: string;
+}
+
 export interface Lead {
   id?: number;
   name: string;
@@ -7,4 +12,7 @@ export interface Lead {
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
+  type: LeadType;
+  leadGenStatus: 'Pending' | 'Processed' | 'Archived';
+  message?: string;
 }

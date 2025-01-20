@@ -2,11 +2,13 @@ import { Lead } from '../types/Lead';
 
 interface LeadTableProps {
   leads: Lead[];
-  onEdit: (lead: Lead) => void;
-  onDelete: (id: number) => void;
+  onStatusUpdate: (id: number, newStatus: string) => void;
+  onSendEmail: (lead: Lead) => void;
+  filterStatus?: string;
+  searchQuery?: string;
 }
 
-export default function LeadTable({ leads, onEdit, onDelete }: LeadTableProps) {
+export default function LeadTable({ leads, onStatusUpdate, onSendEmail, filterStatus, searchQuery }: LeadTableProps) {
   return (
     <table className="lead-table">
       <thead>
@@ -14,20 +16,46 @@ export default function LeadTable({ leads, onEdit, onDelete }: LeadTableProps) {
           <th>Name</th>
           <th>Email</th>
           <th>Phone</th>
+          <th>Type</th>
           <th>Status</th>
+          <th>Lead Gen Status</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
-        {leads.map((lead) => (
+        {leads
+          .filter(lead =>
+            (!filterStatus || lead.status === filterStatus) &&
+            (!searchQuery ||
+              lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              lead.phone.includes(searchQuery)
+            )
+          )
+          .map((lead) => (
           <tr key={lead.id}>
             <td>{lead.name}</td>
             <td>{lead.email}</td>
             <td>{lead.phone}</td>
+            <td>{lead.type.name}</td>
             <td>{lead.status}</td>
             <td>
-              <button onClick={() => onEdit(lead)}>Edit</button>
-              <button onClick={() => onDelete(lead.id!)}>Delete</button>
+              <select
+                value={lead.leadGenStatus}
+                onChange={(e) => onStatusUpdate(lead.id!, e.target.value)}
+              >
+                <option value="Pending">Pending</option>
+                <option value="Processed">Processed</option>
+                <option value="Archived">Archived</option>
+              </select>
+            </td>
+            <td>
+              <button
+                onClick={() => onSendEmail(lead)}
+                disabled={lead.leadGenStatus !== 'Processed'}
+              >
+                Send Email
+              </button>
             </td>
           </tr>
         ))}
