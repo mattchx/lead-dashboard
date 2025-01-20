@@ -1,8 +1,50 @@
 import express from 'express';
 import db from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
+
+// Rate limiting for external submissions
+const submissionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many submissions from this IP, please try again later'
+});
+
+// External lead submission endpoint
+router.post('/external', submissionLimiter, (req, res) => {
+  const { name, email, phone, type_id, contact_name, contact_email } = req.body;
+  
+  // Basic validation
+  if (!name || !email || !phone || !type_id || !contact_name || !contact_email) {
+    console.log('Invalid submission attempt:', { name, email, phone, type_id });
+    return res.status(400).json({
+      error: 'Name, email, phone, type, contact name and contact email are required'
+    });
+  }
+
+  try {
+    const result = db.prepare(`
+      INSERT INTO leads (
+        name, email, phone, status, notes,
+        type_id, message, contact_name, contact_email,
+        lead_gen_status, time_received, source
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      name, email, phone, 'New', '',
+      type_id, '', contact_name, contact_email,
+      'Pending', new Date().toISOString(), 'external'
+    );
+
+    const newLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(result.lastInsertRowid);
+    console.log('New external lead received:', newLead);
+    res.status(201).json(newLead);
+  } catch (error) {
+    console.error('Error creating external lead:', error);
+    res.status(500).json({ error: 'Failed to create lead' });
+  }
+});
 
 // Get all leads
 router.get('/', authenticateToken, (req, res) => {
