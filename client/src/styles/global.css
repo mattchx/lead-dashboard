@@ -21,6 +21,22 @@ body {
 }
 
 /* Lead Form Button Styles */
+.lead-form .form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.lead-form .form-actions .left-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.lead-form .form-actions .right-actions {
+  margin-left: auto;
+}
+
 .lead-form .form-actions .save-button {
   background-color: #4CAF50;
   color: white;

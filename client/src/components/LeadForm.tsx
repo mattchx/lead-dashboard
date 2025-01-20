@@ -156,17 +156,25 @@ export default function LeadForm({ initialData, leadTypes, onSubmit, onCancel, o
       </div>
 
       <div className="form-actions">
-        <button type="submit" className="save-button">Save</button>
+        <div className="left-actions">
+          <button type="submit" className="save-button">Save</button>
+          <button type="button" className="cancel-button" onClick={onCancel}>Cancel</button>
+        </div>
         {initialData && onDelete && (
-          <button
-            type="button"
-            className="delete-button"
-            onClick={onDelete}
-          >
-            Delete
-          </button>
+          <div className="right-actions">
+            <button
+              type="button"
+              className="delete-button"
+              onClick={() => {
+                if (window.confirm('Are you sure you want to delete this lead?')) {
+                  onDelete();
+                }
+              }}
+            >
+              Delete
+            </button>
+          </div>
         )}
-        <button type="button" className="cancel-button" onClick={onCancel}>Cancel</button>
       </div>
     </form>
   );
