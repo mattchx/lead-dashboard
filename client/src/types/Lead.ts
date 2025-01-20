@@ -15,4 +15,6 @@ export interface Lead {
   type: LeadType;
   leadGenStatus: 'Pending' | 'Processed' | 'Archived';
   message?: string;
+  contactName: string;
+  contactEmail: string;
 }

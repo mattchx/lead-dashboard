@@ -25,6 +25,8 @@ db.exec(`
     status TEXT NOT NULL DEFAULT 'New',
     notes TEXT,
     type_id INTEGER NOT NULL REFERENCES lead_types(id),
+    contact_name TEXT NOT NULL,
+    contact_email TEXT NOT NULL,
     lead_gen_status TEXT DEFAULT 'Pending',
     message TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

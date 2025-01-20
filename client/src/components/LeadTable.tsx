@@ -16,6 +16,8 @@ export default function LeadTable({ leads, onStatusUpdate, onSendEmail, filterSt
           <th>Name</th>
           <th>Email</th>
           <th>Phone</th>
+          <th>Contact Name</th>
+          <th>Contact Email</th>
           <th>Type</th>
           <th>Status</th>
           <th>Lead Gen Status</th>
@@ -37,6 +39,8 @@ export default function LeadTable({ leads, onStatusUpdate, onSendEmail, filterSt
             <td>{lead.name}</td>
             <td>{lead.email}</td>
             <td>{lead.phone}</td>
+            <td>{lead.contactName}</td>
+            <td>{lead.contactEmail}</td>
             <td>{lead.type.name}</td>
             <td>{lead.status}</td>
             <td>

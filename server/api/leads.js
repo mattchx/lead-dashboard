@@ -24,11 +24,11 @@ router.get('/', authenticateToken, (req, res) => {
 
 // Create new lead
 router.post('/', authenticateToken, (req, res) => {
-  const { name, email, phone, status, notes, type_id, message } = req.body;
+  const { name, email, phone, status, notes, type_id, message, contact_name, contact_email } = req.body;
   
-  if (!name || !email || !phone || !type_id) {
+  if (!name || !email || !phone || !type_id || !contact_name || !contact_email) {
     return res.status(400).json({
-      error: 'Name, email, phone and type are required'
+      error: 'Name, email, phone, type, contact name and contact email are required'
     });
   }
 
@@ -36,12 +36,12 @@ router.post('/', authenticateToken, (req, res) => {
     const result = db.prepare(`
       INSERT INTO leads (
         name, email, phone, status, notes,
-        type_id, message,
+        type_id, message, contact_name, contact_email,
         lead_gen_status, time_received
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       name, email, phone, status || 'New', notes,
-      type_id, message,
+      type_id, message, contact_name, contact_email,
       'Pending', new Date().toISOString()
     );
 
@@ -56,11 +56,11 @@ router.post('/', authenticateToken, (req, res) => {
 // Update lead
 router.put('/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
-  const { name, email, phone, status, notes, type_id, message } = req.body;
+  const { name, email, phone, status, notes, type_id, message, contact_name, contact_email } = req.body;
 
-  if (!name || !email || !phone || !type_id) {
+  if (!name || !email || !phone || !type_id || !contact_name || !contact_email) {
     return res.status(400).json({
-      error: 'Name, email, phone and type are required'
+      error: 'Name, email, phone, type, contact name and contact email are required'
     });
   }
 
@@ -75,9 +75,11 @@ router.put('/:id', authenticateToken, (req, res) => {
         notes = ?,
         type_id = ?,
         message = ?,
+        contact_name = ?,
+        contact_email = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(name, email, phone, status, notes, type_id, message, id);
+    `).run(name, email, phone, status, notes, type_id, message, contact_name, contact_email, id);
 
     const updatedLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
     res.json(updatedLead);
