@@ -41,7 +41,7 @@ export default function LeadTable({ leads, onStatusUpdate, onSendEmail, filterSt
             <td>{lead.phone}</td>
             <td>{lead.contactName}</td>
             <td>{lead.contactEmail}</td>
-            <td>{lead.type.name}</td>
+            <td>{lead.type?.name || 'No Type'}</td>
             <td>{lead.status}</td>
             <td>
               <select

@@ -32,7 +32,17 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new TypeError("Response is not JSON");
+      }
       const data = await response.json();
+      if (!Array.isArray(data)) {
+        throw new TypeError("Expected array of lead types");
+      }
       setLeadTypes(data);
     } catch (error) {
       console.error('Error fetching lead types:', error);
