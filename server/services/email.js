@@ -1,5 +1,8 @@
 import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend';
-import { MAILER_SEND_TOKEN } from '../config.js';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const MAILER_SEND_TOKEN = process.env.MAILER_SEND_TOKEN;
 
 const mailerSend = new MailerSend({
   apiKey: MAILER_SEND_TOKEN
@@ -14,16 +17,13 @@ export async function sendLeadConfirmation(details) {
     .setFrom(sender)
     .setTo(recipients)
     .setSubject('Thank you for your submission')
-    .setHtml(`
-      <p>Hello ${details.contact_name},</p>
-      <p>Thank you for contacting us. Here are your submission details:</p>
-      <ul>
-        <li>Name: ${details.name}</li>
-        <li>Email: ${details.email}</li>
-        <li>Phone: ${details.phone}</li>
-      </ul>
-      <p>We'll be in touch soon!</p>
-    `);
+    .setHtml(
+      confirmationTemplate
+        .replace(/{{name}}/g, details.name)
+        .replace(/{{email}}/g, details.email)
+        .replace(/{{phone}}/g, details.phone)
+        .replace(/{{contact_name}}/g, details.contact_name)
+    );
 
   try {
     await mailerSend.email.send(emailParams);
@@ -33,6 +33,79 @@ export async function sendLeadConfirmation(details) {
     throw error;
   }
 }
+const confirmationTemplate = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <style>
+      body { font-family: Arial, sans-serif; line-height: 1.6; }
+      .container { max-width: 600px; margin: 20px auto; padding: 20px; }
+      .header { color: #333; }
+      .details { margin: 20px 0; }
+      .footer { margin-top: 30px; font-size: 0.9em; color: #666; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2 class="header">Thank you for your submission!</h2>
+      <div class="details">
+        <p>We've received your information and will be in touch soon.</p>
+        <p>Here's what you submitted:</p>
+        <ul>
+          <li><strong>Name:</strong> {{name}}</li>
+          <li><strong>Email:</strong> {{email}}</li>
+          <li><strong>Phone:</strong> {{phone}}</li>
+          <li><strong>Preferred Contact:</strong> {{contact_name}}</li>
+        </ul>
+      </div>
+      <div class="footer">
+        <p>If you have any questions, please contact us at info@yourclinic.com</p>
+      </div>
+    </div>
+  </body>
+  </html>
+`;
+
+const dentistTemplate = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <style>
+      body { font-family: Arial, sans-serif; line-height: 1.6; }
+      .container { max-width: 600px; margin: 20px auto; padding: 20px; }
+      .header { color: #333; }
+      .details { margin: 20px 0; }
+      .footer { margin-top: 30px; font-size: 0.9em; color: #666; }
+      .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2 class="header">New Lead Notification</h2>
+      <div class="details">
+        <p>A new lead has been submitted:</p>
+        <ul>
+          <li><strong>Name:</strong> {{name}}</li>
+          <li><strong>Email:</strong> {{email}}</li>
+          <li><strong>Phone:</strong> {{phone}}</li>
+          <li><strong>Preferred Contact:</strong> {{contact_name}}</li>
+          <li><strong>Contact Email:</strong> {{contact_email}}</li>
+        </ul>
+      </div>
+      <div class="footer">
+        <a href="mailto:{{email}}" class="button">Contact Lead</a>
+      </div>
+    </div>
+  </body>
+  </html>
+`;
 
 export async function sendAdminNotification(leadDetails) {
   const recipients = [new Recipient('admin@yourdomain.com')];
@@ -57,6 +130,31 @@ export async function sendAdminNotification(leadDetails) {
     console.log('Admin notification email sent');
   } catch (error) {
     console.error('Error sending admin notification email:', error);
+    throw error;
+  }
+}
+
+export async function sendDentistNotification(details, dentistEmail) {
+  const recipients = [new Recipient(dentistEmail)];
+  
+  const emailParams = new EmailParams()
+    .setFrom(sender)
+    .setTo(recipients)
+    .setSubject('New Lead Notification')
+    .setHtml(
+      dentistTemplate
+        .replace(/{{name}}/g, details.name)
+        .replace(/{{email}}/g, details.email)
+        .replace(/{{phone}}/g, details.phone)
+        .replace(/{{contact_name}}/g, details.contact_name)
+        .replace(/{{contact_email}}/g, details.contact_email)
+    );
+
+  try {
+    await mailerSend.email.send(emailParams);
+    console.log('Dentist notification email sent to:', dentistEmail);
+  } catch (error) {
+    console.error('Error sending dentist notification email:', error);
     throw error;
   }
 }

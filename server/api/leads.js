@@ -189,4 +189,23 @@ router.delete('/:id', authenticateToken, (req, res) => {
   }
 });
 
+// Send notification to dentist
+router.post('/:id/notify-dentist', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { dentistEmail } = req.body;
+
+  try {
+    const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+
+    await sendDentistNotification(lead, dentistEmail);
+    res.json({ message: 'Notification sent successfully' });
+  } catch (error) {
+    console.error('Error sending dentist notification:', error);
+    res.status(500).json({ error: 'Failed to send notification' });
+  }
+});
+
 export default router;
