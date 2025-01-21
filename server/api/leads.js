@@ -2,6 +2,7 @@ import express from 'express';
 import db from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import rateLimit from 'express-rate-limit';
+import { sendLeadConfirmation, sendAdminNotification } from '../services/email.js';
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ const submissionLimiter = rateLimit({
 });
 
 // External lead submission endpoint
-router.post('/external', submissionLimiter, (req, res) => {
+router.post('/external', submissionLimiter, async (req, res) => {
   const { name, email, phone, type_id, contact_name, contact_email, source } = req.body;
   
   // Basic validation
@@ -39,6 +40,28 @@ router.post('/external', submissionLimiter, (req, res) => {
 
     const newLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(result.lastInsertRowid);
     console.log('New external lead received:', newLead);
+    
+    // Send emails
+    try {
+      await sendLeadConfirmation({
+        name,
+        email,
+        phone,
+        contact_name,
+        contact_email
+      });
+      
+      await sendAdminNotification({
+        name,
+        email,
+        phone,
+        contact_name,
+        contact_email
+      });
+    } catch (error) {
+      console.error('Error sending emails:', error);
+    }
+    
     res.status(201).json(newLead);
   } catch (error) {
     console.error('Error creating external lead:', error);
@@ -65,7 +88,7 @@ router.get('/', authenticateToken, (req, res) => {
 });
 
 // Create new lead
-router.post('/', authenticateToken, (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   const { name, email, phone, status, notes, type_id, message, contact_name, contact_email } = req.body;
   
   if (!name || !email || !phone || !type_id || !contact_name || !contact_email) {
@@ -88,6 +111,28 @@ router.post('/', authenticateToken, (req, res) => {
     );
 
     const newLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(result.lastInsertRowid);
+    
+    // Send emails
+    try {
+      await sendLeadConfirmation({
+        name,
+        email,
+        phone,
+        contact_name,
+        contact_email
+      });
+      
+      await sendAdminNotification({
+        name,
+        email,
+        phone,
+        contact_name,
+        contact_email
+      });
+    } catch (error) {
+      console.error('Error sending emails:', error);
+    }
+    
     res.status(201).json(newLead);
   } catch (error) {
     console.error('Error creating lead:', error);
