@@ -1,38 +1,18 @@
-import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend';
+import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const MAILER_SEND_TOKEN = process.env.MAILER_SEND_TOKEN;
-
-const mailerSend = new MailerSend({
-  apiKey: MAILER_SEND_TOKEN
+// SES configuration
+const transporter = nodemailer.createTransport({
+  SES: {
+    region: process.env.AWS_REGION,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
 });
 
-const sender = new Sender('no-reply@yourdomain.com', 'Lead Dashboard');
+const sender = '"Lead Dashboard" <no-reply@yourdomain.com>';
 
-export async function sendLeadConfirmation(details) {
-  const recipients = [new Recipient(details.email)];
-  
-  const emailParams = new EmailParams()
-    .setFrom(sender)
-    .setTo(recipients)
-    .setSubject('Thank you for your submission')
-    .setHtml(
-      confirmationTemplate
-        .replace(/{{name}}/g, details.name)
-        .replace(/{{email}}/g, details.email)
-        .replace(/{{phone}}/g, details.phone)
-        .replace(/{{contact_name}}/g, details.contact_name)
-    );
-
-  try {
-    await mailerSend.email.send(emailParams);
-    console.log('Lead confirmation email sent to:', email);
-  } catch (error) {
-    console.error('Error sending lead confirmation email:', error);
-    throw error;
-  }
-}
 const confirmationTemplate = `
   <!DOCTYPE html>
   <html>
@@ -107,14 +87,33 @@ const dentistTemplate = `
   </html>
 `;
 
+export async function sendLeadConfirmation(details) {
+  const mailOptions = {
+    from: sender,
+    to: details.email,
+    subject: 'Thank you for your submission',
+    html: confirmationTemplate
+      .replace(/{{name}}/g, details.name)
+      .replace(/{{email}}/g, details.email)
+      .replace(/{{phone}}/g, details.phone)
+      .replace(/{{contact_name}}/g, details.contact_name)
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Lead confirmation email sent to:', details.email);
+  } catch (error) {
+    console.error('Error sending lead confirmation email:', error);
+    throw error;
+  }
+}
+
 export async function sendAdminNotification(leadDetails) {
-  const recipients = [new Recipient('admin@yourdomain.com')];
-  
-  const emailParams = new EmailParams()
-    .setFrom(sender)
-    .setTo(recipients)
-    .setSubject('New Lead Submission')
-    .setHtml(`
+  const mailOptions = {
+    from: sender,
+    to: 'admin@yourdomain.com',
+    subject: 'New Lead Submission',
+    html: `
       <p>New lead submission received:</p>
       <ul>
         <li>Name: ${leadDetails.name}</li>
@@ -123,10 +122,11 @@ export async function sendAdminNotification(leadDetails) {
         <li>Contact Name: ${leadDetails.contact_name}</li>
         <li>Contact Email: ${leadDetails.contact_email}</li>
       </ul>
-    `);
+    `
+  };
 
   try {
-    await mailerSend.email.send(emailParams);
+    await transporter.sendMail(mailOptions);
     console.log('Admin notification email sent');
   } catch (error) {
     console.error('Error sending admin notification email:', error);
@@ -135,23 +135,20 @@ export async function sendAdminNotification(leadDetails) {
 }
 
 export async function sendDentistNotification(details, dentistEmail) {
-  const recipients = [new Recipient(dentistEmail)];
-  
-  const emailParams = new EmailParams()
-    .setFrom(sender)
-    .setTo(recipients)
-    .setSubject('New Lead Notification')
-    .setHtml(
-      dentistTemplate
-        .replace(/{{name}}/g, details.name)
-        .replace(/{{email}}/g, details.email)
-        .replace(/{{phone}}/g, details.phone)
-        .replace(/{{contact_name}}/g, details.contact_name)
-        .replace(/{{contact_email}}/g, details.contact_email)
-    );
+  const mailOptions = {
+    from: sender,
+    to: dentistEmail,
+    subject: 'New Lead Notification',
+    html: dentistTemplate
+      .replace(/{{name}}/g, details.name)
+      .replace(/{{email}}/g, details.email)
+      .replace(/{{phone}}/g, details.phone)
+      .replace(/{{contact_name}}/g, details.contact_name)
+      .replace(/{{contact_email}}/g, details.contact_email)
+  };
 
   try {
-    await mailerSend.email.send(emailParams);
+    await transporter.sendMail(mailOptions);
     console.log('Dentist notification email sent to:', dentistEmail);
   } catch (error) {
     console.error('Error sending dentist notification email:', error);
