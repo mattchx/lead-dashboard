@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import db from './db.js';
 import authRouter from './api/auth.js';
 import leadsRouter from './api/leads.js';
 import 'dotenv/config';

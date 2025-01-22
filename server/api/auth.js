@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../db.js';
+import { sendMagicLink, verifyMagicLink } from '../services/magicLink.js';
 
 const router = express.Router();
 
@@ -34,31 +35,54 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// User login
-router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+// Magic Link - Send
+router.post('/magic-link', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
 
   try {
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid credentials' });
+    await sendMagicLink(email);
+    res.json({ message: 'Magic link sent' });
+  } catch (error) {
+    console.error('Magic link error:', error);
+    res.status(500).json({ error: 'Failed to send magic link' });
+  }
+});
+
+// Magic Link - Verify
+router.get('/magic-link/verify', async (req, res) => {
+  const { token } = req.query;
+  
+  if (!token) {
+    return res.status(400).json({ error: 'Token is required' });
+  }
+
+  try {
+    const { user, error } = await verifyMagicLink(token);
+    if (error) {
+      return res.status(400).json({ error });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid credentials' });
-    }
-
-    const token = jwt.sign(
-      { userId: user.id, username: user.username },
+    const accessToken = jwt.sign(
+      { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '15m' }
     );
 
-    res.json({ token });
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000
+    });
+
+    res.json({ message: 'Login successful', user });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Failed to login' });
+    console.error('Magic link verification error:', error);
+    res.status(500).json({ error: 'Failed to verify magic link' });
   }
 });
 

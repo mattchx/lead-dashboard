@@ -1,17 +1,26 @@
+import { SESClient, SendRawEmailCommand } from '@aws-sdk/client-ses';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// SES configuration
-const transporter = nodemailer.createTransport({
-  SES: {
-    region: process.env.AWS_REGION,
+// Create SES client
+const ses = new SESClient({
+  region: process.env.AWS_REGION,
+  credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
   }
 });
 
-const sender = '"Lead Dashboard" <no-reply@yourdomain.com>';
+// Create Nodemailer transport
+const transporter = nodemailer.createTransport({
+  SES: { 
+    ses,
+    aws: { SendRawEmailCommand }
+  }
+});
+
+const sender = '"Lead Dashboard" <info@aiwebpro.xyz>';
 
 const confirmationTemplate = `
   <!DOCTYPE html>
@@ -86,6 +95,24 @@ const dentistTemplate = `
   </body>
   </html>
 `;
+
+export async function sendEmail({ to, subject, text, html }) {
+  const mailOptions = {
+    from: sender,
+    to,
+    subject,
+    text,
+    html
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Email sent to:', to);
+  } catch (error) {
+    console.error('Error sending email:', error);
+    throw error;
+  }
+}
 
 export async function sendLeadConfirmation(details) {
   const mailOptions = {
