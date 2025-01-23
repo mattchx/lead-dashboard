@@ -1,6 +1,6 @@
 import express from 'express';
 import db from '../db.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateSession } from '../middleware/auth.js';
 import rateLimit from 'express-rate-limit';
 import { sendLeadConfirmation, sendAdminNotification } from '../services/email.js';
 
@@ -70,7 +70,7 @@ router.post('/external', submissionLimiter, async (req, res) => {
 });
 
 // Get all leads
-router.get('/', authenticateToken, (req, res) => {
+router.get('/', authenticateSession, (req, res) => {
   try {
     const leads = db.prepare(`
       SELECT
@@ -88,7 +88,7 @@ router.get('/', authenticateToken, (req, res) => {
 });
 
 // Create new lead
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateSession, async (req, res) => {
   const { name, email, phone, status, notes, type_id, message, contact_name, contact_email } = req.body;
   
   if (!name || !email || !phone || !type_id || !contact_name || !contact_email) {
@@ -141,7 +141,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // Update lead
-router.put('/:id', authenticateToken, (req, res) => {
+router.put('/:id', authenticateSession, (req, res) => {
   const { id } = req.params;
   const { name, email, phone, status, notes, type_id, message, contact_name, contact_email } = req.body;
 
@@ -177,7 +177,7 @@ router.put('/:id', authenticateToken, (req, res) => {
 });
 
 // Delete lead
-router.delete('/:id', authenticateToken, (req, res) => {
+router.delete('/:id', authenticateSession, (req, res) => {
   const { id } = req.params;
 
   try {
@@ -190,7 +190,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
 });
 
 // Send notification to dentist
-router.post('/:id/notify-dentist', authenticateToken, async (req, res) => {
+router.post('/:id/notify-dentist', authenticateSession, async (req, res) => {
   const { id } = req.params;
   const { dentistEmail } = req.body;
 

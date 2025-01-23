@@ -66,28 +66,57 @@ router.post('/login', async (req, res) => {
     
     console.log('Login successful for user:', user.username);
 
-    const accessToken = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '15m' }
-    );
+    // Create new session
+    const sessionId = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    
+    db.prepare(`
+      INSERT INTO sessions (id, user_id, expires_at)
+      VALUES (?, ?, ?)
+    `).run(sessionId, user.id, expiresAt.toISOString());
 
-    res.cookie('accessToken', accessToken, {
+    res.cookie('sessionId', sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 15 * 60 * 1000
+      maxAge: 30 * 60 * 1000 // 30 minutes
     });
 
     res.json({
       message: 'Login successful',
-      user,
-      accessToken
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      }
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Failed to login' });
   }
+});
+
+// Logout endpoint
+router.post('/logout', (req, res) => {
+  const sessionId = req.cookies.sessionId;
+  
+  if (sessionId) {
+    try {
+      // Delete session from database
+      db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
+      
+      // Clear session cookie
+      res.clearCookie('sessionId', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  }
+
+  res.sendStatus(204);
 });
 
 export default router;
