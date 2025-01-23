@@ -29,13 +29,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     fetchLeads();
   }, []);
 
+  const { authFetch } = useAuth();
+  
   const fetchLeads = async () => {
     try {
-      const response = await fetch('http://localhost:3002/api/leads', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await authFetch('/api/leads');
       const data = await response.json();
       if (Array.isArray(data)) {
         setLeads(data);
@@ -50,11 +48,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
   const handleStatusUpdate = async (id: number, newStatus: string) => {
     try {
-      await fetch(`http://localhost:3002/api/leads/${id}/status`, {
+      await authFetch(`/api/leads/${id}/status`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ status: newStatus })
       });
@@ -66,11 +63,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
   const handleSendEmail = async (lead: Lead) => {
     try {
-      await fetch('http://localhost:3002/api/leads/send-email', {
+      await authFetch('/api/leads/send-email', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(lead)
       });
@@ -88,11 +84,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const handleDelete = async (id?: number) => {
     if (!id) return;
     try {
-      await fetch(`http://localhost:3002/api/leads/${id}`, {
+      await authFetch(`/api/leads/${id}`, {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          'Content-Type': 'application/json'
         }
       });
       setShowForm(false);
@@ -120,11 +115,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
   const handleSubmit = async (lead: Lead) => {
     try {
-      await fetch(`http://localhost:3002/api/leads/${lead.id}`, {
+      await authFetch(`/api/leads/${lead.id}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(lead)
       });

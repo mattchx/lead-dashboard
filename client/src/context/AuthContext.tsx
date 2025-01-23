@@ -2,9 +2,10 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 
 interface AuthContextType {
   token: string | null;
-  login: (accessToken: string, refreshToken: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
+  authFetch: (input: RequestInfo, init?: RequestInit) => Promise<Response>;
 }
 
 const AuthContext = createContext<AuthContextType>(null!);
@@ -28,9 +29,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (parts.length === 2) return parts.pop()?.split(';').shift();
   };
 
-  const login = async (accessToken: string, refreshToken: string) => {
-    setAuthCookies(accessToken, refreshToken);
-    setToken(accessToken);
+  const login = async (username: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!response.ok) {
+         console.log(response)
+        throw new Error('Login failed');
+      }
+
+      const { accessToken } = await response.json();
+      setToken(accessToken);
+      setAuthCookies(accessToken, '');
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
   const logout = async () => {
@@ -78,8 +98,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(tokenRefreshInterval);
   }, []);
 
+  const authFetch = async (input: RequestInfo, init?: RequestInit) => {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+    const url = typeof input === 'string' ? `${apiBaseUrl}${input}` : input;
+    
+    console.log('Making request to:', url);
+    const headers = new Headers(init?.headers);
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    const response = await fetch(url, {
+      ...init,
+      headers,
+      credentials: 'include'
+    });
+    console.log('Response status:', response.status);
+    return response;
+  };
+
   return (
-    <AuthContext.Provider value={{ token, login, logout, refreshToken }}>
+    <AuthContext.Provider value={{ token, login, logout, refreshToken, authFetch }}>
       {children}
     </AuthContext.Provider>
   );

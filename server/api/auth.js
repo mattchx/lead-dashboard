@@ -2,13 +2,12 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../db.js';
-import { sendMagicLink, verifyMagicLink } from '../services/magicLink.js';
 
 const router = express.Router();
 
 // User registration
 router.post('/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, email } = req.body;
   
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password are required' });
@@ -24,9 +23,9 @@ router.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     db.prepare(`
-      INSERT INTO users (username, password_hash)
-      VALUES (?, ?)
-    `).run(username, passwordHash);
+      INSERT INTO users (username, password_hash, email)
+      VALUES (?, ?, ?)
+    `).run(username, passwordHash, email || null);
 
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
@@ -35,36 +34,37 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Magic Link - Send
-router.post('/magic-link', async (req, res) => {
-  const { email } = req.body;
-  
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required' });
+// Username login
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
   }
 
   try {
-    await sendMagicLink(email);
-    res.json({ message: 'Magic link sent' });
-  } catch (error) {
-    console.error('Magic link error:', error);
-    res.status(500).json({ error: 'Failed to send magic link' });
-  }
-});
-
-// Magic Link - Verify
-router.get('/magic-link/verify', async (req, res) => {
-  const { token } = req.query;
-  
-  if (!token) {
-    return res.status(400).json({ error: 'Token is required' });
-  }
-
-  try {
-    const { user, error } = await verifyMagicLink(token);
-    if (error) {
-      return res.status(400).json({ error });
+    const user = db.prepare(`
+      SELECT * FROM users
+      WHERE username = ?
+    `).get(username);
+    
+    console.log('Login attempt for user:', username);
+    console.log('User found:', user ? user.username : 'none');
+    
+    if (!user) {
+      console.log('User not found');
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    console.log('Comparing password hash:', user.password_hash);
+    const validPassword = await bcrypt.compare(password, user.password_hash);
+    
+    if (!validPassword) {
+      console.log('Password comparison failed');
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    console.log('Login successful for user:', user.username);
 
     const accessToken = jwt.sign(
       { userId: user.id, email: user.email },
@@ -79,10 +79,14 @@ router.get('/magic-link/verify', async (req, res) => {
       maxAge: 15 * 60 * 1000
     });
 
-    res.json({ message: 'Login successful', user });
+    res.json({
+      message: 'Login successful',
+      user,
+      accessToken
+    });
   } catch (error) {
-    console.error('Magic link verification error:', error);
-    res.status(500).json({ error: 'Failed to verify magic link' });
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Failed to login' });
   }
 });
 

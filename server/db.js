@@ -1,24 +1,20 @@
 import Database from 'better-sqlite3';
 import 'dotenv/config';
+import bcrypt from 'bcryptjs';
 
 const db = new Database(process.env.DATABASE_PATH);
 
+console.log('Initializing database at:', process.env.DATABASE_PATH);
+
 // Create all tables with final schema
-db.exec(`
+try {
+  db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
+    email TEXT,
     role TEXT DEFAULT 'user'
-  );
-
-  CREATE TABLE IF NOT EXISTS magic_links (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL,
-    token TEXT NOT NULL UNIQUE,
-    expires_at DATETIME NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS lead_types (
@@ -45,9 +41,6 @@ db.exec(`
 
   -- Create indexes
   CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-  CREATE INDEX IF NOT EXISTS idx_magic_links_token ON magic_links(token);
-  CREATE INDEX IF NOT EXISTS idx_magic_links_email ON magic_links(email);
   CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
   CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 
@@ -56,5 +49,23 @@ db.exec(`
     ('Dentist'),
     ('Roofer');
 `);
+  console.log('Database schema initialized successfully');
+
+  // Create admin user if it doesn't exist
+  const adminPasswordHash = bcrypt.hashSync('admin123', 10);
+  db.prepare(`
+    INSERT OR IGNORE INTO users (username, password_hash, role)
+    VALUES ('admin', ?, 'admin')
+  `).run(adminPasswordHash);
+  console.log('Admin user created or verified');
+} catch (error) {
+  console.error('Error initializing database schema:', error);
+  process.exit(1);
+}
+const adminPasswordHash = bcrypt.hashSync('admin123', 10);
+db.prepare(`
+  INSERT OR IGNORE INTO users (username, password_hash, role)
+  VALUES ('admin', ?, 'admin')
+`).run(adminPasswordHash);
 
 export default db;
