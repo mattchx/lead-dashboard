@@ -20,7 +20,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const response = await authFetch('/api/auth/validate');
         
         if (!response.ok) {
-          throw new Error('Session validation failed');
+          console.log('Session validation failed - user not authenticated');
+          setIsAuthenticated(false);
+          return;
         }
 
         const data = await response.json();
@@ -28,11 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.isAuthenticated) {
           setIsAuthenticated(true);
         } else {
-          // Clear any invalid session
+          console.log('Session validation failed - invalid session');
           await logout();
         }
       } catch (error) {
-        console.error('Session validation error:', error);
+        console.log('Session validation failed:', error);
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
