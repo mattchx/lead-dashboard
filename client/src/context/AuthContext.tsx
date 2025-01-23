@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   authFetch: (input: RequestInfo, init?: RequestInit) => Promise<Response>;
@@ -11,6 +12,38 @@ const AuthContext = createContext<AuthContextType>(null!);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const validateSession = async () => {
+      try {
+        const response = await authFetch('/api/auth/validate');
+        
+        if (!response.ok) {
+          throw new Error('Session validation failed');
+        }
+
+        const data = await response.json();
+        
+        if (data.isAuthenticated) {
+          setIsAuthenticated(true);
+        } else {
+          // Clear any invalid session
+          await logout();
+        }
+      } catch (error) {
+        console.error('Session validation error:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Only validate if we're not already authenticated
+    if (!isAuthenticated) {
+      validateSession();
+    }
+  }, [isAuthenticated]);
 
   const login = async (username: string, password: string) => {
     try {
@@ -50,7 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     const response = await fetch(url, {
       ...init,
-      credentials: 'include'
+      credentials: 'include',
+      headers: {
+        ...init?.headers,
+        'Content-Type': 'application/json'
+      }
     });
 
     if (response.status === 401) {
@@ -61,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, authFetch }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, logout, authFetch }}>
       {children}
     </AuthContext.Provider>
   );

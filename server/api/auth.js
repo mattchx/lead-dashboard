@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../db.js';
+import crypto from 'crypto';
 
 const router = express.Router();
 
@@ -79,7 +80,9 @@ router.post('/login', async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 60 * 1000 // 30 minutes
+      maxAge: 30 * 60 * 1000, // 30 minutes
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' ? '.yourdomain.com' : undefined
     });
 
     res.json({
@@ -93,6 +96,40 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+// Session validation endpoint
+router.get('/validate', (req, res) => {
+  const sessionId = req.cookies.sessionId;
+  
+  if (!sessionId) {
+    return res.status(401).json({ isAuthenticated: false });
+  }
+
+  try {
+    const session = db.prepare(`
+      SELECT s.*, u.*
+      FROM sessions s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.id = ? AND s.expires_at > CURRENT_TIMESTAMP
+    `).get(sessionId);
+
+    if (!session) {
+      return res.status(401).json({ isAuthenticated: false });
+    }
+
+    res.json({
+      isAuthenticated: true,
+      user: {
+        id: session.user_id,
+        username: session.username,
+        email: session.email
+      }
+    });
+  } catch (error) {
+    console.error('Session validation error:', error);
+    res.status(500).json({ error: 'Failed to validate session' });
   }
 });
 

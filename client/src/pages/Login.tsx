@@ -1,13 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-interface LoginProps {
-  onLoginSuccess: () => void;
-}
-
 import './Login.css';
 
-export default function Login({ onLoginSuccess }: LoginProps) {
+export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,7 +15,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
     try {
       await login(username, password);
-      onLoginSuccess();
     } catch (error: unknown) {
       if (error instanceof Error) {
         setError(error.message);

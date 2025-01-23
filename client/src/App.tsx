@@ -1,19 +1,30 @@
-import { useState } from 'react';
 import './styles/global.css';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 
-export default function App() {
-  const [currentPage, setCurrentPage] = useState<'login' | 'dashboard'>('login');
+function AppContent() {
+  const { isAuthenticated, isLoading, logout } = useAuth();
+
+  if (isLoading) {
+    return <div className="loading">Loading...</div>;
+  }
 
   return (
-    <AuthProvider>
-      {currentPage === 'login' ? (
-        <Login onLoginSuccess={() => setCurrentPage('dashboard')} />
+    <>
+      {isAuthenticated ? (
+        <Dashboard onLogout={logout} />
       ) : (
-        <Dashboard onLogout={() => setCurrentPage('login')} />
+        <Login />
       )}
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
