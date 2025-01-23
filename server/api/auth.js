@@ -1,159 +1,166 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import db from '../db.js';
-import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
+import { validateEmail, validatePassword } from '../middleware/validation.js';
 
 const router = express.Router();
 
-// User registration
-router.post('/register', async (req, res) => {
+// Register new user
+router.post('/register', validateEmail, validatePassword, async (req, res) => {
   const { username, password, email } = req.body;
   
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password are required' });
-  }
-
   try {
-    const existingUser = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-    if (existingUser) {
+    // Check if username exists
+    const { rows } = await db.execute({
+      sql: 'SELECT * FROM users WHERE username = ?',
+      args: [username]
+    });
+    
+    if (rows.length > 0) {
       return res.status(400).json({ error: 'Username already exists' });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
+    // Hash password
+    const passwordHash = bcrypt.hashSync(password, 10);
+    
+    // Insert new user
+    await db.execute({
+      sql: `
+        INSERT INTO users (username, password_hash, email)
+        VALUES (?, ?, ?)
+      `,
+      args: [username, passwordHash, email]
+    });
 
-    db.prepare(`
-      INSERT INTO users (username, password_hash, email)
-      VALUES (?, ?, ?)
-    `).run(username, passwordHash, email || null);
-
-    res.status(201).json({ message: 'User created successfully' });
+    res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Failed to create user' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Username login
+// Login user
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password are required' });
-  }
-
   try {
-    const user = db.prepare(`
-      SELECT * FROM users
-      WHERE username = ?
-    `).get(username);
+    // Get user from database
+    const { rows } = await db.execute({
+      sql: 'SELECT * FROM users WHERE username = ?',
+      args: [username]
+    });
     
-    console.log('Login attempt for user:', username);
-    console.log('User found:', user ? user.username : 'none');
+    const user = rows[0];
     
     if (!user) {
-      console.log('User not found');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    console.log('Comparing password hash:', user.password_hash);
-    const validPassword = await bcrypt.compare(password, user.password_hash);
-    
+    // Verify password
+    const validPassword = bcrypt.compareSync(password, user.password_hash);
     if (!validPassword) {
-      console.log('Password comparison failed');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-    
-    console.log('Login successful for user:', user.username);
 
-    // Create new session
-    const sessionId = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    // Create session
+    const sessionId = uuidv4();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
     
-    db.prepare(`
-      INSERT INTO sessions (id, user_id, expires_at)
-      VALUES (?, ?, ?)
-    `).run(sessionId, user.id, expiresAt.toISOString());
+    await db.execute({
+      sql: `
+        INSERT INTO sessions (id, user_id, expires_at)
+        VALUES (?, ?, ?)
+      `,
+      args: [sessionId, user.id, expiresAt.toISOString()]
+    });
 
+    // Set session cookie
     res.cookie('sessionId', sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 30 * 60 * 1000, // 30 minutes
-      path: '/',
-      domain: process.env.NODE_ENV === 'production' ? '.yourdomain.com' : undefined
+      sameSite: 'Lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
-    res.json({
-      message: 'Login successful',
+    res.json({ 
       user: {
         id: user.id,
         username: user.username,
-        email: user.email
+        email: user.email,
+        role: user.role
       }
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Failed to login' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Session validation endpoint
-router.get('/validate', (req, res) => {
+// Logout user
+router.post('/logout', async (req, res) => {
   const sessionId = req.cookies.sessionId;
-  
+
   if (!sessionId) {
-    return res.status(401).json({ isAuthenticated: false });
+    return res.json({ message: 'Logged out successfully' });
   }
 
   try {
-    const session = db.prepare(`
-      SELECT s.*, u.*
-      FROM sessions s
-      JOIN users u ON s.user_id = u.id
-      WHERE s.id = ? AND s.expires_at > CURRENT_TIMESTAMP
-    `).get(sessionId);
+    await db.execute({
+      sql: 'DELETE FROM sessions WHERE id = ?',
+      args: [sessionId.toString()]
+    });
+    
+    // Clear session cookie with same options as when it was set
+    res.clearCookie('sessionId', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax'
+    });
+    
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
-    if (!session) {
-      return res.status(401).json({ isAuthenticated: false });
+// Validate session
+router.get('/validate', async (req, res) => {
+  try {
+    const sessionId = req.cookies.sessionId;
+    
+    if (!sessionId) {
+      return res.json({ isAuthenticated: false });
+    }
+
+    const { rows } = await db.execute({
+      sql: `
+        SELECT s.*, u.*
+        FROM sessions s
+        JOIN users u ON s.user_id = u.id
+        WHERE s.id = ? AND s.expires_at > datetime('now')
+      `,
+      args: [sessionId]
+    });
+
+    if (rows.length === 0) {
+      return res.json({ isAuthenticated: false });
     }
 
     res.json({
       isAuthenticated: true,
       user: {
-        id: session.user_id,
-        username: session.username,
-        email: session.email
+        id: rows[0].user_id,
+        username: rows[0].username,
+        email: rows[0].email,
+        role: rows[0].role
       }
     });
   } catch (error) {
     console.error('Session validation error:', error);
-    res.status(500).json({ error: 'Failed to validate session' });
+    res.json({ isAuthenticated: false });
   }
-});
-
-// Logout endpoint
-router.post('/logout', (req, res) => {
-  const sessionId = req.cookies.sessionId;
-  
-  if (sessionId) {
-    try {
-      // Delete session from database
-      db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
-      
-      // Clear session cookie
-      res.clearCookie('sessionId', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  }
-
-  res.sendStatus(204);
 });
 
 export default router;

@@ -1,28 +1,38 @@
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 
-const db = new Database(process.env.DATABASE_PATH);
+const db = createClient({
+  url: process.env.TURSO_DATABASE_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN
+});
 
-console.log('Initializing database at:', process.env.DATABASE_PATH);
+console.log('Connected to Turso database');
 
-// Create all tables with final schema
+// Helper function to execute SQL statements sequentially
+async function executeStatements(statements) {
+  for (const sql of statements) {
+    await db.execute(sql);
+  }
+}
+
+// Initialize database
 try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
+  const initializationStatements = [
+    `CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       email TEXT,
       role TEXT DEFAULT 'user'
-    );
-
-    CREATE TABLE IF NOT EXISTS lead_types (
+    )`,
+    
+    `CREATE TABLE IF NOT EXISTS lead_types (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE
-    );
-
-    CREATE TABLE IF NOT EXISTS leads (
+    )`,
+    
+    `CREATE TABLE IF NOT EXISTS leads (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       email TEXT NOT NULL,
@@ -37,35 +47,37 @@ try {
       source TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS sessions (
+    )`,
+    
+    `CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
       user_id INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       expires_at DATETIME NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
+    )`,
+    
+    `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`,
+    `CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email)`,
+    `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)`,
+    
+    `INSERT OR IGNORE INTO lead_types (name) VALUES ('Dentist')`,
+    `INSERT OR IGNORE INTO lead_types (name) VALUES ('Roofer')`
+  ];
 
-    -- Create indexes
-    CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-    CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
-    CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
-    CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-    CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
-
-    -- Insert initial lead types
-    INSERT OR IGNORE INTO lead_types (name) VALUES
-      ('Dentist'),
-      ('Roofer');
-  `);
+  await executeStatements(initializationStatements);
 
   // Create admin user if it doesn't exist
   const adminPasswordHash = bcrypt.hashSync('admin123', 10);
-  db.prepare(`
-    INSERT OR IGNORE INTO users (username, password_hash, role)
-    VALUES ('admin', ?, 'admin')
-  `).run(adminPasswordHash);
+  await db.execute({
+    sql: `
+      INSERT OR IGNORE INTO users (username, password_hash, role)
+      VALUES ('admin', ?, 'admin')
+    `,
+    args: [adminPasswordHash]
+  });
   
   console.log('Database initialization complete');
 } catch (error) {

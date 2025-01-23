@@ -1,210 +1,129 @@
 import express from 'express';
+import { authenticate, authorize } from '../middleware/auth.js';
 import db from '../db.js';
-import { authenticateSession } from '../middleware/auth.js';
-import rateLimit from 'express-rate-limit';
-import { sendLeadConfirmation, sendAdminNotification } from '../services/email.js';
 
 const router = express.Router();
 
-// Rate limiting for external submissions
-const submissionLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many submissions from this IP, please try again later'
-});
-
-// External lead submission endpoint
-router.post('/external', submissionLimiter, async (req, res) => {
-  const { name, email, phone, type_id, contact_name, contact_email, source } = req.body;
-  
-  // Basic validation
-  if (!name || !email || !phone || !type_id || !contact_name || !contact_email) {
-    console.log('Invalid submission attempt:', { name, email, phone, type_id });
-    return res.status(400).json({
-      error: 'Name, email, phone, type, contact name and contact email are required'
-    });
-  }
-
-  try {
-    const result = db.prepare(`
-      INSERT INTO leads (
-        name, email, phone, status, notes,
-        type_id, message, contact_name, contact_email,
-        lead_gen_status, source
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      name, email, phone, 'New', '',
-      type_id, null, contact_name, contact_email,
-      'Pending', source || null
-    );
-
-    const newLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(result.lastInsertRowid);
-    console.log('New external lead received:', newLead);
-    
-    // Send emails
-    try {
-      await sendLeadConfirmation({
-        name,
-        email,
-        phone,
-        contact_name,
-        contact_email
-      });
-      
-      await sendAdminNotification({
-        name,
-        email,
-        phone,
-        contact_name,
-        contact_email
-      });
-    } catch (error) {
-      console.error('Error sending emails:', error);
-    }
-    
-    res.status(201).json(newLead);
-  } catch (error) {
-    console.error('Error creating external lead:', error);
-    res.status(500).json({ error: 'Failed to create lead' });
-  }
-});
-
 // Get all leads
-router.get('/', authenticateSession, (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
-    const leads = db.prepare(`
+    const { rows } = await db.execute(`
       SELECT
-        leads.*,
-        lead_types.name as type_name
-      FROM leads
-      JOIN lead_types ON leads.type_id = lead_types.id
-      ORDER BY leads.created_at DESC
-    `).all();
-    res.json(leads);
+        l.*,
+        lt.name as type_name
+      FROM leads l
+      LEFT JOIN lead_types lt ON l.type_id = lt.id
+      ORDER BY l.created_at DESC
+    `);
+    
+    res.json(rows);
   } catch (error) {
     console.error('Error fetching leads:', error);
-    res.status(500).json({ error: 'Failed to fetch leads' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Create new lead
-router.post('/', authenticateSession, async (req, res) => {
-  const { name, email, phone, status, notes, type_id, message, contact_name, contact_email } = req.body;
+router.post('/', authenticate, authorize(['admin', 'user']), async (req, res) => {
+  const lead = req.body;
   
-  if (!name || !email || !phone || !type_id || !contact_name || !contact_email) {
-    return res.status(400).json({
-      error: 'Name, email, phone, type, contact name and contact email are required'
-    });
-  }
-
   try {
-    const result = db.prepare(`
-      INSERT INTO leads (
-        name, email, phone, status, notes,
-        type_id, message, contact_name, contact_email,
-        lead_gen_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      name, email, phone, status || 'New', notes,
-      type_id, message || null, contact_name, contact_email,
-      'Pending'
-    );
+    const { lastInsertRowid } = await db.execute({
+      sql: `
+        INSERT INTO leads (
+          name, email, phone, type_id, contact_name, 
+          contact_email, message, source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        lead.name,
+        lead.email,
+        lead.phone,
+        lead.type_id,
+        lead.contact_name,
+        lead.contact_email,
+        lead.message,
+        lead.source
+      ]
+    });
 
-    const newLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(result.lastInsertRowid);
+    const { rows } = await db.execute({
+      sql: 'SELECT * FROM leads WHERE id = ?',
+      args: [lastInsertRowid.toString()]
+    });
     
-    // Send emails
-    try {
-      await sendLeadConfirmation({
-        name,
-        email,
-        phone,
-        contact_name,
-        contact_email
-      });
-      
-      await sendAdminNotification({
-        name,
-        email,
-        phone,
-        contact_name,
-        contact_email
-      });
-    } catch (error) {
-      console.error('Error sending emails:', error);
-    }
-    
-    res.status(201).json(newLead);
+    res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Error creating lead:', error);
-    res.status(500).json({ error: 'Failed to create lead' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Update lead
-router.put('/:id', authenticateSession, (req, res) => {
+router.put('/:id', authenticate, authorize(['admin', 'user']), async (req, res) => {
   const { id } = req.params;
-  const { name, email, phone, status, notes, type_id, message, contact_name, contact_email } = req.body;
-
-  if (!name || !email || !phone || !type_id || !contact_name || !contact_email) {
-    return res.status(400).json({
-      error: 'Name, email, phone, type, contact name and contact email are required'
-    });
-  }
+  const lead = req.body;
 
   try {
-    db.prepare(`
-      UPDATE leads
-      SET
-        name = ?,
-        email = ?,
-        phone = ?,
-        status = ?,
-        notes = ?,
-        type_id = ?,
-        message = ?,
-        contact_name = ?,
-        contact_email = ?,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(name, email, phone, status, notes, type_id, message, contact_name, contact_email, id);
+    await db.execute({
+      sql: `
+        UPDATE leads
+        SET
+          name = ?,
+          email = ?,
+          phone = ?,
+          type_id = ?,
+          contact_name = ?,
+          contact_email = ?,
+          message = ?,
+          source = ?,
+          status = ?,
+          notes = ?,
+          lead_gen_status = ?
+        WHERE id = ?
+      `,
+      args: [
+        lead.name,
+        lead.email,
+        lead.phone,
+        lead.type_id,
+        lead.contact_name,
+        lead.contact_email,
+        lead.message,
+        lead.source,
+        lead.status,
+        lead.notes,
+        lead.lead_gen_status,
+        id
+      ]
+    });
 
-    const updatedLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
-    res.json(updatedLead);
+    const { rows } = await db.execute({
+      sql: 'SELECT * FROM leads WHERE id = ?',
+      args: [id]
+    });
+    
+    res.json(rows[0]);
   } catch (error) {
     console.error('Error updating lead:', error);
-    res.status(500).json({ error: 'Failed to update lead' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Delete lead
-router.delete('/:id', authenticateSession, (req, res) => {
+router.delete('/:id', authenticate, authorize(['admin']), async (req, res) => {
   const { id } = req.params;
 
   try {
-    db.prepare('DELETE FROM leads WHERE id = ?').run(id);
+    await db.execute({
+      sql: 'DELETE FROM leads WHERE id = ?',
+      args: [id]
+    });
+    
     res.sendStatus(204);
   } catch (error) {
     console.error('Error deleting lead:', error);
-    res.status(500).json({ error: 'Failed to delete lead' });
-  }
-});
-
-// Send notification to dentist
-router.post('/:id/notify-dentist', authenticateSession, async (req, res) => {
-  const { id } = req.params;
-  const { dentistEmail } = req.body;
-
-  try {
-    const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
-    if (!lead) {
-      return res.status(404).json({ error: 'Lead not found' });
-    }
-
-    await sendDentistNotification(lead, dentistEmail);
-    res.json({ message: 'Notification sent successfully' });
-  } catch (error) {
-    console.error('Error sending dentist notification:', error);
-    res.status(500).json({ error: 'Failed to send notification' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

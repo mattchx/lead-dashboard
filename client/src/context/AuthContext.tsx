@@ -20,7 +20,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const response = await authFetch('/api/auth/validate');
         
         if (!response.ok) {
-          console.log('Session validation failed - user not authenticated');
           setIsAuthenticated(false);
           return;
         }
@@ -30,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.isAuthenticated) {
           setIsAuthenticated(true);
         } else {
-          console.log('Session validation failed - invalid session');
           await logout();
         }
       } catch (error) {
@@ -41,11 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Only validate if we're not already authenticated
-    if (!isAuthenticated) {
-      validateSession();
-    }
-  }, [isAuthenticated]);
+    // Validate session on initial load and page reloads
+    validateSession();
+  }, []);
 
   const login = async (username: string, password: string) => {
     try {
@@ -54,7 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password }),
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -71,7 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await authFetch('/api/auth/logout', {
-        method: 'POST'
+        method: 'POST',
+        credentials: 'include'
       });
       setIsAuthenticated(false);
     } catch (error) {

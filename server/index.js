@@ -14,7 +14,12 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser(process.env.SESSION_SECRET, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+}));
 
 // Routes
 app.use('/api/auth', authRouter);
