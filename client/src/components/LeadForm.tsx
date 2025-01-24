@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Lead } from '../types/Lead';
+import './LeadForm.css';
 
 interface LeadFormProps {
   initialData?: Lead;
