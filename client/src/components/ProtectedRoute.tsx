@@ -6,9 +6,13 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { token } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
-  if (!token) {
+  if (isLoading) {
+    return null; // or loading spinner
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
