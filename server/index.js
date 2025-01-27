@@ -11,10 +11,10 @@ const PORT = process.env.PORT || 3002;
 // Middleware
 app.use(cors({
   origin: [
-    ,
     process.env.CLIENT_BASE_URL,
     'https://london-dentists.findpros.site',
-    'http://localhost:3002'
+    'http://localhost:3002',
+    'http://localhost:4321'
   ],
   credentials: true
 }));

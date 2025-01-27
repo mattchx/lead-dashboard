@@ -127,4 +127,47 @@ router.delete('/:id', authenticate, authorize(['admin']), async (req, res) => {
   }
 });
 
+// Create lead from external source
+router.post('/external', async (req, res) => {
+  const lead = req.body;
+  
+  // Basic validation
+  if (!lead.name || !lead.email) {
+    return res.status(400).json({
+      error: 'Name and email are required'
+    });
+  }
+
+  try {
+    const { lastInsertRowid } = await db.execute({
+      sql: `
+        INSERT INTO leads (
+          name, email, phone, type_id, contact_name,
+          contact_email, message, source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        lead.name,
+        lead.email,
+        lead.phone || null,
+        lead.type_id || null,
+        lead.contact_name || null,
+        lead.contact_email || null,
+        lead.message || null,
+        lead.source || 'external'
+      ]
+    });
+
+    const { rows } = await db.execute({
+      sql: 'SELECT * FROM leads WHERE id = ?',
+      args: [lastInsertRowid.toString()]
+    });
+    
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error('Error creating external lead:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
