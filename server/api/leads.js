@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticate, authorize } from '../middleware/auth.js';
 import db from '../db.js';
-import { sendLeadConfirmation } from '../services/email.js'
+import { sendLeadConfirmation, sendProviderNotification } from '../services/email.js'
 
 const router = express.Router();
 
@@ -128,6 +128,24 @@ router.delete('/:id', authenticate, authorize(['admin']), async (req, res) => {
   }
 });
 
+// Send email to provider
+router.post('/send-email', authenticate, (req, res) => {
+  const lead = req.body;
+
+  const leadDetails = {
+    name: lead.name, email: lead.email, phone: lead.phone, contact_name: lead.contact_name, contact_email: lead.contact_email
+  }
+
+  try {
+    sendProviderNotification(leadDetails, contact_email)
+
+    res.status(400).send({ message: 'Email sent sucessfullly.' })
+  } catch (err) {
+    console.error('Error sending email:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+})
+
 // Create lead from external source
 router.post('/external', async (req, res) => {
   const lead = req.body;
@@ -165,7 +183,7 @@ router.post('/external', async (req, res) => {
     });
 
     const emailDetails = {
-      contact_name: lead.contact_name, 
+      contact_name: lead.contact_name,
       name: lead.name,
       email: lead.email,
       phone: lead.phone
