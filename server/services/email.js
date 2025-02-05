@@ -46,7 +46,7 @@ const confirmationTemplate = `
   </html>
 `;
 
-const dentistTemplate = `
+const providerTemplate = `
   <!DOCTYPE html>
   <html>
   <head>
@@ -149,12 +149,12 @@ export async function sendAdminNotification(leadDetails) {
   }
 }
 
-export async function sendDentistNotification(details, dentistEmail) {
+export async function sendProviderNotification(details, providerEmail) {
   const mailOptions = {
     from: sender,
-    to: dentistEmail,
+    to: providerEmail,
     subject: 'New Lead Notification',
-    html: dentistTemplate
+    html: providerTemplate
       .replace(/{{name}}/g, details.name)
       .replace(/{{email}}/g, details.email)
       .replace(/{{phone}}/g, details.phone)
@@ -164,9 +164,9 @@ export async function sendDentistNotification(details, dentistEmail) {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log('Dentist notification email sent to:', dentistEmail);
+    console.log('Provider notification email sent to:', providerEmail);
   } catch (error) {
-    console.error('Error sending dentist notification email:', error);
+    console.error('Error sending provider notification email:', error);
     throw error;
   }
 }
