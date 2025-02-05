@@ -20,7 +20,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-const sender = '"Lead Dashboard" <info@aiwebpro.xyz>';
+const sender = '"Find Pros" <info@findpros.site>';
 
 const confirmationTemplate = `
   <!DOCTYPE html>
@@ -36,19 +36,10 @@ const confirmationTemplate = `
   </head>
   <body>
     <div class="container">
-      <h2 class="header">Thank you for your submission!</h2>
+      <h2 class="header">Thank you for booking!</h2>
       <div class="details">
-        <p>We've received your information and will be in touch soon.</p>
-        <p>Here's what you submitted:</p>
-        <ul>
-          <li><strong>Name:</strong> {{name}}</li>
-          <li><strong>Email:</strong> {{email}}</li>
-          <li><strong>Phone:</strong> {{phone}}</li>
-          <li><strong>Preferred Contact:</strong> {{contact_name}}</li>
-        </ul>
-      </div>
-      <div class="footer">
-        <p>If you have any questions, please contact us at info@yourclinic.com</p>
+        <p>We've received your booking request and will be in touch soon.</p>
+        <p>Thanks for choosing to book with {{contact_name}}.</p>
       </div>
     </div>
   </body>
@@ -120,9 +111,6 @@ export async function sendLeadConfirmation(details) {
     to: details.email,
     subject: 'Thank you for your submission',
     html: confirmationTemplate
-      .replace(/{{name}}/g, details.name)
-      .replace(/{{email}}/g, details.email)
-      .replace(/{{phone}}/g, details.phone)
       .replace(/{{contact_name}}/g, details.contact_name)
   };
 

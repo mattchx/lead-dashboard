@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate, authorize } from '../middleware/auth.js';
 import db from '../db.js';
+import { sendLeadConfirmation } from '../services/email.js'
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ router.get('/', authenticate, async (req, res) => {
       LEFT JOIN lead_types lt ON l.type_id = lt.id
       ORDER BY l.created_at DESC
     `);
-    
+
     res.json(rows);
   } catch (error) {
     console.error('Error fetching leads:', error);
@@ -26,7 +27,7 @@ router.get('/', authenticate, async (req, res) => {
 // Create new lead
 router.post('/', authenticate, authorize(['admin', 'user']), async (req, res) => {
   const lead = req.body;
-  
+
   try {
     const { lastInsertRowid } = await db.execute({
       sql: `
@@ -51,7 +52,7 @@ router.post('/', authenticate, authorize(['admin', 'user']), async (req, res) =>
       sql: 'SELECT * FROM leads WHERE id = ?',
       args: [lastInsertRowid.toString()]
     });
-    
+
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Error creating lead:', error);
@@ -102,7 +103,7 @@ router.put('/:id', authenticate, authorize(['admin', 'user']), async (req, res) 
       sql: 'SELECT * FROM leads WHERE id = ?',
       args: [id]
     });
-    
+
     res.json(rows[0]);
   } catch (error) {
     console.error('Error updating lead:', error);
@@ -119,7 +120,7 @@ router.delete('/:id', authenticate, authorize(['admin']), async (req, res) => {
       sql: 'DELETE FROM leads WHERE id = ?',
       args: [id]
     });
-    
+
     res.sendStatus(204);
   } catch (error) {
     console.error('Error deleting lead:', error);
@@ -130,7 +131,7 @@ router.delete('/:id', authenticate, authorize(['admin']), async (req, res) => {
 // Create lead from external source
 router.post('/external', async (req, res) => {
   const lead = req.body;
-  
+
   // Basic validation
   if (!lead.name || !lead.email) {
     return res.status(400).json({
@@ -162,7 +163,16 @@ router.post('/external', async (req, res) => {
       sql: 'SELECT * FROM leads WHERE id = ?',
       args: [lastInsertRowid.toString()]
     });
-    
+
+    const emailDetails = {
+      contact_name: lead.contact_name, 
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone
+    }
+
+    sendLeadConfirmation(emailDetails)
+
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Error creating external lead:', error);
