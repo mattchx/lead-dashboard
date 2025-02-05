@@ -109,7 +109,7 @@ export async function sendLeadConfirmation(details) {
   const mailOptions = {
     from: sender,
     to: details.email,
-    subject: 'Thank you for your submission',
+    subject: 'Thank you for contacting ' + details.contact_name,
     html: confirmationTemplate
       .replace(/{{contact_name}}/g, details.contact_name)
   };
