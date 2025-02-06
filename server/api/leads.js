@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticate, authorize } from '../middleware/auth.js';
 import db from '../db.js';
-import { sendLeadConfirmation, sendProviderNotification } from '../services/email.js'
+import { sendAdminNotification, sendLeadConfirmation, sendProviderNotification } from '../services/email.js'
 
 const router = express.Router();
 
@@ -190,6 +190,7 @@ router.post('/external', async (req, res) => {
     }
 
     sendLeadConfirmation(emailDetails)
+    sendAdminNotification(emailDetails)
 
     res.status(201).json(rows[0]);
   } catch (error) {

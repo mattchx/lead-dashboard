@@ -126,7 +126,7 @@ export async function sendLeadConfirmation(details) {
 export async function sendAdminNotification(leadDetails) {
   const mailOptions = {
     from: sender,
-    to: 'admin@yourdomain.com',
+    to: 'info@findpros.site',
     subject: 'New Lead Submission',
     html: `
       <p>New lead submission received:</p>
